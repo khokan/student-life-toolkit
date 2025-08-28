@@ -1,0 +1,12 @@
+# Ignore node_modules in all folders
+**/node_modules/
+
+# Optional: other common ignores
+.env
+.DS_Store
+dist/
+build/
+*.log
+
+# Ignore environment files
+/client/.env.local
