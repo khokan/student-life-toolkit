@@ -1,42 +1,71 @@
-import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { scheduleSchema } from '../schemas/zodSchemas'
-import useAxiosSecure from '../hooks/useAxiosSecure'
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { scheduleSchema } from "../schemas/zodSchemas";
+import useAxiosSecure from "../hooks/useAxiosSecure";
 
-export default function SchedulePage(){
-  const { register, handleSubmit, reset } = useForm({ resolver: zodResolver(scheduleSchema) })
-  const [list,setList] = useState([])
-  const [editing, setEditing] = useState(null)
-    const axiosSecure = useAxiosSecure();
-  const { register: regEdit, handleSubmit: handleEditSubmit, reset: resetEdit } = useForm({ resolver: zodResolver(scheduleSchema) })
+export default function SchedulePage() {
+  const { register, handleSubmit, reset } = useForm({
+    resolver: zodResolver(scheduleSchema),
+  });
+  const [list, setList] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const axiosSecure = useAxiosSecure();
+  const {
+    register: regEdit,
+    handleSubmit: handleEditSubmit,
+    reset: resetEdit,
+  } = useForm({ resolver: zodResolver(scheduleSchema) });
 
-  async function load(){
-    const res = await axiosSecure.get('/schedule'); setList(res.data)
-  }
-  useEffect(()=>{ load() }, [])
-
-  async function onSubmit(data){
-    console.log(data)
-    console.log(import.meta.env.VITE_NODE_SERVER_URL)
-    console.log(axiosSecure.defaults.baseURL)
-    try{ await axiosSecure.post('/schedule', data); reset(); load(); }catch(e){ alert(e.response?.data?.error || 'Error') }
-  }
-
-  async function onUpdate(data){
-    try{ await axiosSecure.put(`/schedule/${editing._id}`, data); setEditing(null); resetEdit(); load(); }
-    catch(e){ alert(e.response?.data?.error || 'Error') }
-  }
-
-  async function onDelete(id){
-    if(window.confirm('Delete this class?')){
-      try{ await api.delete(`/schedule/${id}`); load() }catch(e){ alert('Error deleting') }
+  async function load() {
+    try {
+      const res = await axiosSecure.get("/schedule");
+      setList(res.data);
+    } catch (e) {
+      alert("Error loading schedule");
     }
   }
 
-  function openEdit(item){
-    setEditing(item)
-    resetEdit(item)
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function onSubmit(data) {
+    try {
+      console.log(data);
+      await axiosSecure.post("/schedule", data);
+      reset();
+      load();
+    } catch (e) {
+      alert(e.response?.data?.error || "Error creating schedule");
+    }
+  }
+
+  async function onUpdate(data) {
+    try {
+      await axiosSecure.put(`/schedule/${editing._id}`, data);
+      setEditing(null);
+      resetEdit();
+      load();
+    } catch (e) {
+      alert(e.response?.data?.error || "Error updating schedule");
+    }
+  }
+
+  async function onDelete(id) {
+    if (window.confirm("Delete this class?")) {
+      try {
+        await axiosSecure.delete(`/schedule/${id}`);
+        load();
+      } catch (e) {
+        alert("Error deleting schedule");
+      }
+    }
+  }
+
+  function openEdit(item) {
+    setEditing(item);
+    resetEdit(item);
   }
 
   return (
@@ -44,16 +73,47 @@ export default function SchedulePage(){
       {/* Create New Class */}
       <div className="card p-4">
         <h3>Add Class</h3>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2 mt-2">
-          <input {...register('subject')} placeholder="Subject" className="input w-full" />
-          <input {...register('day')} placeholder="Day (e.g., Monday)" className="input w-full" />
+        <form
+          onSubmit={handleSubmit(onSubmit)} // Fixed: removed arrow function
+          className="space-y-2 mt-2"
+        >
+          <input
+            {...register("subject")}
+            placeholder="Subject"
+            className="input w-full"
+          />
+          <input
+            {...register("day")}
+            placeholder="Day (e.g., Monday)"
+            className="input w-full"
+          />
           <div className="flex gap-2">
-            <input {...register('startTime')} placeholder="Start" className="input w-full" />
-            <input {...register('endTime')} placeholder="End" className="input w-full" />
+            <input
+              {...register("startTime")}
+              placeholder="Start"
+              className="input w-full"
+            />
+            <input
+              {...register("endTime")}
+              placeholder="End"
+              className="input w-full"
+            />
           </div>
-          <input {...register('instructor')} placeholder="Instructor" className="input w-full" />
-          <input type="color" {...register('color')} defaultValue="#60A5FA" className="w-16 h-10 border" />
-          <button className="btn">Save</button>
+          <input
+            {...register("instructor")}
+            placeholder="Instructor"
+            className="input w-full"
+          />
+          <input
+            type="color"
+            {...register("color")}
+            defaultValue="#60A5FA"
+            className="w-16 h-10 border"
+          />
+          <button type="submit" className="btn">
+            Save
+          </button>{" "}
+          {/* Added type="submit" */}
         </form>
       </div>
 
@@ -61,15 +121,28 @@ export default function SchedulePage(){
       <div className="card p-4">
         <h3>Schedule</h3>
         <div className="mt-2 space-y-2">
-          {list.map(s=> (
-            <div key={s._id} className="flex items-center justify-between p-2 rounded" style={{background:s.color||'#fff'}}>
+          {list.map((s) => (
+            <div
+              key={s._id}
+              className="flex items-center justify-between p-2 rounded"
+              style={{ background: s.color || "#fff" }}
+            >
               <div>
                 <div className="font-semibold">{s.subject}</div>
-                <div className="text-sm">{s.day} • {s.startTime} - {s.endTime} • {s.instructor}</div>
+                <div className="text-sm">
+                  {s.day} • {s.startTime} - {s.endTime} • {s.instructor}
+                </div>
               </div>
               <div className="space-x-2">
-                <button className="btn btn-xs" onClick={()=>openEdit(s)}>Edit</button>
-                <button className="btn btn-xs btn-error" onClick={()=>onDelete(s._id)}>Delete</button>
+                <button className="btn btn-xs" onClick={() => openEdit(s)}>
+                  Edit
+                </button>
+                <button
+                  className="btn btn-xs btn-error"
+                  onClick={() => onDelete(s._id)}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}
@@ -82,22 +155,55 @@ export default function SchedulePage(){
           <div className="card bg-white p-4 w-96">
             <h3 className="font-semibold mb-2">Edit Class</h3>
             <form onSubmit={handleEditSubmit(onUpdate)} className="space-y-2">
-              <input {...regEdit('subject')} placeholder="Subject" className="input w-full" />
-              <input {...regEdit('day')} placeholder="Day" className="input w-full" />
+              <input
+                {...regEdit("subject")}
+                placeholder="Subject"
+                className="input w-full"
+              />
+              <input
+                {...regEdit("day")}
+                placeholder="Day"
+                className="input w-full"
+              />
               <div className="flex gap-2">
-                <input {...regEdit('startTime')} placeholder="Start" className="input w-full" />
-                <input {...regEdit('endTime')} placeholder="End" className="input w-full" />
+                <input
+                  {...regEdit("startTime")}
+                  placeholder="Start"
+                  className="input w-full"
+                />
+                <input
+                  {...regEdit("endTime")}
+                  placeholder="End"
+                  className="input w-full"
+                />
               </div>
-              <input {...regEdit('instructor')} placeholder="Instructor" className="input w-full" />
-              <input type="color" {...regEdit('color')} className="w-16 h-10 border" />
+              <input
+                {...regEdit("instructor")}
+                placeholder="Instructor"
+                className="input w-full"
+              />
+              <input
+                type="color"
+                {...regEdit("color")}
+                className="w-16 h-10 border"
+              />
               <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={()=>setEditing(null)} className="btn btn-sm">Cancel</button>
-                <button className="btn btn-sm btn-primary">Update</button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(null)}
+                  className="btn btn-sm"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-sm btn-primary">
+                  Update
+                </button>{" "}
+                {/* Added type="submit" */}
               </div>
             </form>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
