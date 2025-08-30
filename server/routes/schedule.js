@@ -17,7 +17,10 @@ router.post("/", validate(scheduleCreate), async (req, res, next) => {
 
 router.get("/", async (req, res, next) => {
   try {
-    const list = await schedule.find().sort("day startTime");
+    const list = await schedule.find().sort({
+      date: -1, // Descending by date (newest first)
+      startTime: 1, // Ascending by startTime (earliest first for same date)
+    });
     res.json(list);
   } catch (e) {
     next(e);
