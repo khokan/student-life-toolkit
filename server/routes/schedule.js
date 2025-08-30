@@ -7,7 +7,6 @@ const router = express.Router();
 
 router.post("/", validate(scheduleCreate), async (req, res, next) => {
   try {
-    console.log("data:", req.validated);
     const data = req.validated;
     const doc = await schedule.create(data);
     res.status(201).json(doc);
@@ -20,7 +19,6 @@ router.get("/", async (req, res, next) => {
   try {
     const list = await schedule.find().sort("day startTime");
     res.json(list);
-    console.log(list);
   } catch (e) {
     next(e);
   }
