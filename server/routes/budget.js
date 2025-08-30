@@ -19,7 +19,6 @@ router.post("/", validate(budgetCreate), async (req, res, next) => {
 router.get("/", async (req, res, next) => {
   try {
     const docs = await Budget.find();
-    console.log("Fetched budgets:", docs);
     res.json(docs);
   } catch (err) {
     next(err);

@@ -1,12 +1,19 @@
 const { z } = require("zod");
 
 const scheduleCreate = z.object({
-  subject: z.string().min(1, "Subject required"),
-  day: z.string().min(1),
-  startTime: z.string().min(1),
-  endTime: z.string().min(1),
+  subject: z.string().min(1, "Subject is required"),
   instructor: z.string().optional(),
-  color: z.string().regex(/^#/).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .optional(),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  colorCode: z
+    .string()
+    .regex(/^#([0-9A-Fa-f]{6})$/, "Must be a valid hex color like #FF5733")
+    .optional()
+    .default("#2196F3"),
 });
 
 const budgetCreate = z.object({

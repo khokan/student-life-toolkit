@@ -26,6 +26,7 @@ router.get("/", async (req, res, next) => {
 
 router.put("/:id", validate(scheduleCreate), async (req, res, next) => {
   try {
+    console.log("Updating schedule:", req.params.id, req.validated);
     const doc = await schedule.findByIdAndUpdate(req.params.id, req.validated, {
       new: true,
     });
