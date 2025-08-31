@@ -1,18 +1,21 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, X } from "lucide-react";
+import { useEffect } from "react";
 import { examSchema } from "../../schemas/zodSchemas";
-import { Loader2 } from "lucide-react";
 
-/**
- * ExamForm - Form component for creating exam questions
- * Supports multiple question types with dynamic form fields
- */
-export default function ExamForm({ onSubmit, isLoading = false }) {
+export default function ExamForm({
+  question,
+  onSubmit,
+  isLoading = false,
+  onCancel,
+}) {
   const {
     register,
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(examSchema),
@@ -25,10 +28,33 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
   const selectedType = watch("type");
   const options = watch("options") || [];
 
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (question) {
+      setValue("type", question.type);
+      setValue("difficulty", question.difficulty);
+      setValue("prompt", question.prompt);
+      setValue("answer", question.answer);
+
+      if (question.type === "mcq" && question.options) {
+        question.options.forEach((option, index) => {
+          setValue(`options.${index}`, option);
+        });
+      }
+    } else {
+      // Reset form for new question
+      reset({
+        type: "mcq",
+        difficulty: "medium",
+        prompt: "",
+        answer: "",
+        options: ["", "", "", ""],
+      });
+    }
+  }, [question, setValue, reset]);
+
   const handleFormSubmit = (data) => {
     onSubmit(data);
-    reset();
-    document.getElementById("exam_modal").close();
   };
 
   return (
@@ -38,7 +64,11 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
         <label className="label">
           <span className="label-text font-semibold">Question Type</span>
         </label>
-        <select {...register("type")} className="select select-bordered">
+        <select
+          {...register("type")}
+          className="select select-bordered"
+          disabled={isLoading}
+        >
           <option value="mcq">Multiple Choice (MCQ)</option>
           <option value="short">Short Answer</option>
           <option value="tf">True/False</option>
@@ -53,7 +83,11 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
         <label className="label">
           <span className="label-text font-semibold">Difficulty Level</span>
         </label>
-        <select {...register("difficulty")} className="select select-bordered">
+        <select
+          {...register("difficulty")}
+          className="select select-bordered"
+          disabled={isLoading}
+        >
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
@@ -70,6 +104,7 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
           placeholder="Enter your question here..."
           className="textarea textarea-bordered h-24"
           rows={3}
+          disabled={isLoading}
         />
         {errors.prompt && (
           <span className="text-error text-sm mt-1">
@@ -84,6 +119,9 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
           <label className="label">
             <span className="label-text font-semibold">
               Multiple Choice Options
+            </span>
+            <span className="label-text-alt text-warning">
+              * Check the correct answer
             </span>
           </label>
           {[0, 1, 2, 3].map((index) => (
@@ -163,7 +201,7 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
       <div className="modal-action">
         <button
           type="button"
-          onClick={() => document.getElementById("exam_modal").close()}
+          onClick={onCancel}
           className="btn btn-ghost"
           disabled={isLoading}
         >
@@ -173,8 +211,10 @@ export default function ExamForm({ onSubmit, isLoading = false }) {
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Adding...
+              {question ? "Updating..." : "Adding..."}
             </>
+          ) : question ? (
+            "Update Question"
           ) : (
             "Add Question"
           )}

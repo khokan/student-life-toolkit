@@ -2,25 +2,23 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { examSchema } from "../schemas/zodSchemas";
 import useAxiosSecure from "../hooks/useAxiosSecure";
 import ExamForm from "../components/exam/ExamForm";
 import ExamList from "../components/exam/ExamList";
 import ExamStats from "../components/exam/ExamStats";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import ErrorBoundary from "../components/ui/ErrorBoundary";
-import { FileText, Plus, RefreshCw, AlertCircle } from "lucide-react";
+import { FileText, Plus, RefreshCw, AlertCircle, Edit2 } from "lucide-react";
 
-/**
- * ExamPage - Main component for managing exam questions and answers
- * Features: CRUD operations, filtering, statistics, and question generation
- */
 export default function ExamPage() {
   const [selectedType, setSelectedType] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+  const [editingQuestion, setEditingQuestion] = useState(null);
   const queryClient = useQueryClient();
   const axiosSecure = useAxiosSecure();
 
-  // Fetch questions with React Query for caching and state management
+  // Fetch questions with React Query
   const {
     data: questions = [],
     isLoading,
@@ -33,18 +31,31 @@ export default function ExamPage() {
       const res = await axiosSecure.get("/api/exam");
       return res.data;
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 2, // Retry failed requests twice
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
-  // Create question mutation with optimistic updates
+  // Create question mutation
   const createMutation = useMutation({
     mutationFn: (newQuestion) => axiosSecure.post("/api/exam", newQuestion),
     onSuccess: () => {
       queryClient.invalidateQueries(["exam-questions"]);
+      closeModal();
     },
     onError: (error) => {
       console.error("Create question failed:", error);
+    },
+  });
+
+  // Update question mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => axiosSecure.put(`/api/exam/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["exam-questions"]);
+      closeModal();
+    },
+    onError: (error) => {
+      console.error("Update question failed:", error);
     },
   });
 
@@ -58,6 +69,33 @@ export default function ExamPage() {
       console.error("Delete question failed:", error);
     },
   });
+
+  // Open modal for editing
+  const handleEdit = (question) => {
+    setEditingQuestion(question);
+    document.getElementById("exam_modal").showModal();
+  };
+
+  // Open modal for creating new question
+  const handleCreate = () => {
+    setEditingQuestion(null);
+    document.getElementById("exam_modal").showModal();
+  };
+
+  // Close modal and reset editing state
+  const closeModal = () => {
+    setEditingQuestion(null);
+    document.getElementById("exam_modal").close();
+  };
+
+  // Handle form submission for both create and update
+  const handleSubmit = (data) => {
+    if (editingQuestion) {
+      updateMutation.mutate({ id: editingQuestion._id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
 
   // Filter questions based on selected criteria
   const filteredQuestions = questions.filter((q) => {
@@ -110,10 +148,9 @@ export default function ExamPage() {
                 </div>
               </div>
               <button
-                onClick={() =>
-                  document.getElementById("exam_modal").showModal()
-                }
+                onClick={handleCreate}
                 className="btn btn-primary gap-2"
+                disabled={createMutation.isLoading}
               >
                 <Plus className="w-5 h-5" />
                 Add Question
@@ -178,26 +215,34 @@ export default function ExamPage() {
           {/* Questions List */}
           <ExamList
             questions={filteredQuestions}
+            onEdit={handleEdit}
             onDelete={deleteMutation.mutate}
             isLoading={deleteMutation.isLoading}
           />
 
-          {/* Add Question Modal */}
+          {/* Add/Edit Question Modal */}
           <dialog id="exam_modal" className="modal">
             <div className="modal-box max-w-2xl">
               <form method="dialog">
-                <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+                <button
+                  className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                  onClick={closeModal}
+                >
                   ✕
                 </button>
               </form>
-              <h3 className="text-xl font-bold mb-6">Add New Question</h3>
+              <h3 className="text-xl font-bold mb-6">
+                {editingQuestion ? "Edit Question" : "Add New Question"}
+              </h3>
               <ExamForm
-                onSubmit={createMutation.mutate}
-                isLoading={createMutation.isLoading}
+                question={editingQuestion}
+                onSubmit={handleSubmit}
+                isLoading={createMutation.isLoading || updateMutation.isLoading}
+                onCancel={closeModal}
               />
             </div>
             <form method="dialog" className="modal-backdrop">
-              <button>close</button>
+              <button onClick={closeModal}>close</button>
             </form>
           </dialog>
         </div>

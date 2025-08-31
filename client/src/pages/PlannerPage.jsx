@@ -1,180 +1,301 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { plannerSchema } from "../schemas/zodSchemas";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAxiosSecure from "../hooks/useAxiosSecure";
+import PlannerForm from "../components/planner/PlannerForm";
+import PlannerList from "../components/planner/PlannerList";
+import PlannerStats from "../components/planner/PlannerStats";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import ErrorBoundary from "../components/ui/ErrorBoundary";
+import {
+  Calendar,
+  Plus,
+  RefreshCw,
+  AlertCircle,
+  Target,
+  Clock,
+  BookOpen,
+} from "lucide-react";
 
+/**
+ * PlannerPage - Main component for managing study tasks and schedules
+ * Features: CRUD operations, task tracking, time slot management, and progress monitoring
+ */
 export default function PlannerPage() {
-  const [tasks, setTasks] = useState([]);
-  const [submitError, setSubmitError] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [editingTask, setEditingTask] = useState(null);
+  const queryClient = useQueryClient();
   const axiosSecure = useAxiosSecure();
 
+  // Fetch tasks with React Query for caching and state management
   const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(plannerSchema),
-    defaultValues: {
-      slots: [{ day: "", startTime: "", endTime: "" }],
+    data: tasks = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["planner-tasks"],
+    queryFn: async () => {
+      const res = await axiosSecure.get("/api/planner");
+      return res.data;
+    },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    retry: 2,
+  });
+
+  // Create task mutation
+  const createMutation = useMutation({
+    mutationFn: (newTask) => axiosSecure.post("/api/planner", newTask),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["planner-tasks"]);
+      closeModal();
+    },
+    onError: (error) => {
+      console.error("Create task failed:", error);
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "slots",
+  // Update task mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => axiosSecure.put(`/api/planner/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["planner-tasks"]);
+      closeModal();
+    },
+    onError: (error) => {
+      console.error("Update task failed:", error);
+    },
   });
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  // Delete task mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id) => axiosSecure.delete(`/api/planner/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["planner-tasks"]);
+    },
+    onError: (error) => {
+      console.error("Delete task failed:", error);
+    },
+  });
 
-  const fetchTasks = async () => {
-    try {
-      const res = await axiosSecure.get("/api/planner");
-      setTasks(res.data);
-    } catch (err) {
-      console.error(err);
+  // Toggle task completion mutation
+  const toggleCompletionMutation = useMutation({
+    mutationFn: ({ id, isCompleted }) =>
+      axiosSecure.patch(`/api/planner/${id}`, { isCompleted }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["planner-tasks"]);
+    },
+    onError: (error) => {
+      console.error("Toggle completion failed:", error);
+    },
+  });
+
+  // Filter tasks based on selected criteria
+  const filteredTasks = tasks.filter((task) => {
+    const priorityMatch =
+      selectedPriority === "all" || task.priority === selectedPriority;
+    const statusMatch =
+      selectedStatus === "all" ||
+      (selectedStatus === "completed" ? task.isCompleted : !task.isCompleted);
+    return priorityMatch && statusMatch;
+  });
+
+  // Open modal for editing
+  const handleEdit = (task) => {
+    setEditingTask(task);
+    document.getElementById("planner_modal").showModal();
+  };
+
+  // Open modal for creating new task
+  const handleCreate = () => {
+    setEditingTask(null);
+    document.getElementById("planner_modal").showModal();
+  };
+
+  // Close modal and reset editing state
+  const closeModal = () => {
+    setEditingTask(null);
+    document.getElementById("planner_modal").close();
+  };
+
+  // Handle form submission for both create and update
+  const handleSubmit = (data) => {
+    // Transform deadline to Date object
+    const processedData = {
+      ...data,
+      deadline: new Date(data.deadline),
+      slots: data.slots.filter(
+        (slot) => slot.day && slot.startTime && slot.endTime
+      ),
+    };
+
+    if (editingTask) {
+      updateMutation.mutate({ id: editingTask._id, data: processedData });
+    } else {
+      createMutation.mutate(processedData);
     }
   };
 
-  const onSubmit = async (data) => {
-    try {
-      setSubmitError("");
-      // Transform deadline to Date for server
-      data.deadline = new Date(data.deadline);
-      const res = await axiosSecure.post("/api/planner", data);
-      reset();
-      fetchTasks();
-    } catch (err) {
-      console.error(err);
-      setSubmitError(err.response?.data?.error || "Something went wrong");
-    }
+  // Handle task completion toggle
+  const handleToggleCompletion = (taskId, currentStatus) => {
+    toggleCompletionMutation.mutate({
+      id: taskId,
+      isCompleted: !currentStatus,
+    });
   };
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your study plan..." />;
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-100">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-error mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-error mb-2">
+            Failed to load tasks
+          </h2>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <button onClick={() => refetch()} className="btn btn-primary gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">📝 Study Planner</h2>
-
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col gap-2 max-w-xl"
-      >
-        <input
-          {...register("subject")}
-          placeholder="Subject"
-          className="input input-bordered"
-        />
-        {errors.subject && (
-          <p className="text-red-500">{errors.subject.message}</p>
-        )}
-
-        <input
-          {...register("topic")}
-          placeholder="Topic"
-          className="input input-bordered"
-        />
-        {errors.topic && <p className="text-red-500">{errors.topic.message}</p>}
-
-        <select {...register("priority")} className="select select-bordered">
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-        {errors.priority && (
-          <p className="text-red-500">{errors.priority.message}</p>
-        )}
-
-        <input
-          {...register("deadline")}
-          type="datetime-local"
-          className="input input-bordered"
-        />
-        {errors.deadline && (
-          <p className="text-red-500">{errors.deadline.message}</p>
-        )}
-
-        <div className="border p-2 rounded">
-          <h3 className="font-semibold mb-1">Slots</h3>
-          {fields.map((slot, index) => (
-            <div key={slot.id} className="flex gap-2 mb-2 items-center">
-              <input
-                {...register(`slots.${index}.day`)}
-                placeholder="Day"
-                className="input input-bordered"
-              />
-              <input
-                {...register(`slots.${index}.startTime`)}
-                type="time"
-                className="input input-bordered"
-              />
-              <input
-                {...register(`slots.${index}.endTime`)}
-                type="time"
-                className="input input-bordered"
-              />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-base-100 to-base-200 p-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header Section */}
+          <div className="bg-base-100 rounded-2xl shadow-sm p-6 mb-6 border border-base-300">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-primary/10 rounded-2xl">
+                  <Calendar className="w-8 h-8 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-base-content">
+                    Study Planner
+                  </h1>
+                  <p className="text-base-content/60">
+                    Organize your study schedule and track your progress
+                  </p>
+                </div>
+              </div>
               <button
-                type="button"
-                onClick={() => remove(index)}
-                className="btn btn-sm btn-error"
+                onClick={handleCreate}
+                className="btn btn-primary gap-2"
+                disabled={createMutation.isLoading}
               >
-                X
+                <Plus className="w-5 h-5" />
+                Add Task
               </button>
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => append({ day: "", startTime: "", endTime: "" })}
-            className="btn btn-sm btn-outline mt-1"
-          >
-            Add Slot
-          </button>
-          {errors.slots && (
-            <p className="text-red-500">{errors.slots.message}</p>
-          )}
-        </div>
-
-        {submitError && <p className="text-red-600">{submitError}</p>}
-
-        <button className="btn btn-primary mt-2">Add Task</button>
-      </form>
-
-      <h3 className="text-lg font-semibold mt-6">Existing Tasks</h3>
-      <div className="mt-2 space-y-2">
-        {tasks.map((task) => (
-          <div key={task._id} className="card p-3 border rounded shadow-sm">
-            <p>
-              <strong>Subject:</strong> {task.subject}
-            </p>
-            <p>
-              <strong>Topic:</strong> {task.topic}
-            </p>
-            <p>
-              <strong>Priority:</strong> {task.priority}
-            </p>
-            <p>
-              <strong>Deadline:</strong>{" "}
-              {new Date(task.deadline).toLocaleString()}
-            </p>
-            <p>
-              <strong>Slots:</strong>
-            </p>
-            <ul className="list-disc list-inside">
-              {task.slots.map((s, i) => (
-                <li key={i}>
-                  {s.day}: {s.startTime} - {s.endTime}
-                </li>
-              ))}
-            </ul>
-            <p>
-              <strong>Completed:</strong> {task.isCompleted ? "Yes" : "No"}
-            </p>
           </div>
-        ))}
+
+          {/* Statistics Cards */}
+          <PlannerStats tasks={tasks} />
+
+          {/* Filters Section */}
+          <div className="bg-base-100 rounded-2xl shadow-sm p-6 mb-6 border border-base-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div>
+                <label className="label">
+                  <span className="label-text font-semibold">Priority</span>
+                </label>
+                <select
+                  value={selectedPriority}
+                  onChange={(e) => setSelectedPriority(e.target.value)}
+                  className="select select-bordered w-full"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="high">High Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="low">Low Priority</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text font-semibold">Status</span>
+                </label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="select select-bordered w-full"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text font-semibold">Sort By</span>
+                </label>
+                <select className="select select-bordered w-full">
+                  <option value="deadline">Deadline</option>
+                  <option value="priority">Priority</option>
+                  <option value="created">Recently Added</option>
+                </select>
+              </div>
+              <div>
+                <button
+                  onClick={() => {
+                    setSelectedPriority("all");
+                    setSelectedStatus("all");
+                  }}
+                  className="btn btn-ghost w-full"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tasks List */}
+          <PlannerList
+            tasks={filteredTasks}
+            onEdit={handleEdit}
+            onDelete={deleteMutation.mutate}
+            onToggleCompletion={handleToggleCompletion}
+            isLoading={
+              deleteMutation.isLoading || toggleCompletionMutation.isLoading
+            }
+          />
+
+          {/* Add/Edit Task Modal */}
+          <dialog id="planner_modal" className="modal">
+            <div className="modal-box max-w-2xl">
+              <form method="dialog">
+                <button
+                  className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                  onClick={closeModal}
+                >
+                  ✕
+                </button>
+              </form>
+              <h3 className="text-xl font-bold mb-6">
+                {editingTask ? "Edit Study Task" : "Add New Task"}
+              </h3>
+              <PlannerForm
+                task={editingTask}
+                onSubmit={handleSubmit}
+                isLoading={createMutation.isLoading || updateMutation.isLoading}
+                onCancel={closeModal}
+              />
+            </div>
+            <form method="dialog" className="modal-backdrop">
+              <button onClick={closeModal}>close</button>
+            </form>
+          </dialog>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

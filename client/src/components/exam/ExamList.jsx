@@ -7,11 +7,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-/**
- * ExamList - Displays list of exam questions with actions
- * Supports filtering, deletion, and practice mode initiation
- */
-export default function ExamList({ questions, onDelete, isLoading }) {
+export default function ExamList({ questions, onEdit, onDelete, isLoading }) {
   if (questions.length === 0) {
     return (
       <div className="bg-base-100 rounded-2xl shadow-sm p-8 text-center border border-base-300">
@@ -94,7 +90,11 @@ export default function ExamList({ questions, onDelete, isLoading }) {
                 )}
               </div>
               <div className="flex gap-2 ml-4">
-                <button className="btn btn-sm btn-outline btn-circle">
+                <button
+                  onClick={() => onEdit(question)}
+                  className="btn btn-sm btn-outline btn-circle"
+                  disabled={isLoading}
+                >
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
