@@ -29,7 +29,7 @@ export default function SchedulePage() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (newSchedule) => axiosSecure.post("/api/schedule", newSchedule),
+    mutationFn: async (newSchedule) => await axiosSecure.post("/api/schedule", newSchedule),
     onSuccess: (response) => {
       // Update cache optimistically
       queryClient.setQueryData(["schedules"], (old) => [
@@ -45,8 +45,8 @@ export default function SchedulePage() {
   });
 
   // Edit mutation
-  const editMutation = useMutation({
-    mutationFn: ({ id, data }) => axiosSecure.put(`/api/schedule/${id}`, data),
+  const editMutation =  useMutation({
+    mutationFn: async ({ id, data }) => await axiosSecure.put(`/api/schedule/${id}`, data),
     onSuccess: (response, variables) => {
       // Update cache optimistically
       queryClient.setQueryData(["schedules"], (old) =>

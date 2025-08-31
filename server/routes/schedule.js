@@ -7,7 +7,6 @@ const router = express.Router();
 
 router.post("/", validate(scheduleCreate), async (req, res, next) => {
   try {
-    console.log("Creating schedule:", req.validated);
     const data = req.validated;
     const doc = await schedule.create(data);
     res.status(201).json(doc);
@@ -16,13 +15,21 @@ router.post("/", validate(scheduleCreate), async (req, res, next) => {
   }
 });
 
+
 router.get("/", async (req, res, next) => {
   try {
     const list = await schedule.find().sort({
       date: -1, // Descending by date (newest first)
       startTime: 1, // Ascending by startTime (earliest first for same date)
     });
-    res.json(list);
+
+    // Format the date before sending to frontend
+    const formattedList = list.map(item => ({
+      ...item._doc,
+      date: item.date ? item.date.toISOString().split('T')[0] : undefined
+    }));
+
+    res.json(formattedList);
   } catch (e) {
     next(e);
   }
@@ -30,7 +37,6 @@ router.get("/", async (req, res, next) => {
 
 router.put("/:id", validate(scheduleCreate), async (req, res, next) => {
   try {
-    console.log("Updating schedule:", req.params.id, req.validated);
     const doc = await schedule.findByIdAndUpdate(req.params.id, req.validated, {
       new: true,
     });

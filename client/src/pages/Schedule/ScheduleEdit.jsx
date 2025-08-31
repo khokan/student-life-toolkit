@@ -2,8 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X, Loader2 } from "lucide-react";
 import { scheduleSchema } from "../../schemas/zodSchemas";
-import useAxiosSecure from "../../hooks/useAxiosSecure";
-import { useState } from "react";
+import { useEffect } from "react"; // Changed from useState to useEffect
 
 export default function ScheduleEdit() {
   // This component is used through its Modal export
@@ -11,7 +10,7 @@ export default function ScheduleEdit() {
 }
 
 // Modal Component
-ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
+ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess, loading = false }) {
   const {
     register,
     handleSubmit,
@@ -22,10 +21,8 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
     resolver: zodResolver(scheduleSchema),
   });
 
-  const axiosSecure = useAxiosSecure();
-
-  // Initialize form with schedule data
-  useState(() => {
+  // Initialize form with schedule data - FIXED: Use useEffect instead of useState
+  useEffect(() => {
     if (schedule) {
       setValue("subject", schedule.subject);
       setValue("instructor", schedule.instructor);
@@ -34,27 +31,36 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
       setValue("endTime", schedule.endTime);
       setValue("colorCode", schedule.colorCode || "#3B82F6");
     }
-  });
+  }, [schedule, setValue]);
 
   const onSubmit = async (data) => {
     try {
-      const response = await axiosSecure.put(
-        `/api/schedule/${schedule._id}`,
-        data
-      );
-      onSuccess(response.data);
+      // Format the data for the API but DON'T make the call here
+      const formattedData = {
+        ...data,
+        date: data.date || undefined, // Convert empty string to undefined
+      };
+      
+      // Pass the formatted data to the parent component
+      // The parent will handle the actual API call via React Query
+      onSuccess(formattedData);
     } catch (error) {
-      console.error("Update Error:", error);
-      alert(error.response?.data?.error || "Error updating schedule");
+      console.error("Form validation error:", error);
+      // This should only catch form validation errors, not API errors
     }
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
   };
 
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold">Edit Class</h3>
-          <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
+          <h3 className="text-xl font-bold">Edit Class: {schedule?.subject}</h3>
+          <button onClick={handleClose} className="btn btn-sm btn-circle btn-ghost">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -68,6 +74,7 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
               <input
                 {...register("subject")}
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.subject && (
                 <span className="text-error text-sm mt-1">
@@ -83,6 +90,7 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
               <input
                 {...register("instructor")}
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.instructor && (
                 <span className="text-error text-sm mt-1">
@@ -100,6 +108,7 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
               type="date"
               {...register("date")}
               className="input input-bordered"
+              disabled={loading}
             />
           </div>
 
@@ -112,6 +121,7 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
                 type="time"
                 {...register("startTime")}
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.startTime && (
                 <span className="text-error text-sm mt-1">
@@ -128,6 +138,7 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
                 type="time"
                 {...register("endTime")}
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.endTime && (
                 <span className="text-error text-sm mt-1">
@@ -146,6 +157,7 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
                 type="color"
                 {...register("colorCode")}
                 className="w-12 h-12 border rounded cursor-pointer"
+                disabled={loading}
               />
               <span className="text-sm text-gray-500">
                 Choose a color for this class
@@ -154,15 +166,20 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
           </div>
 
           <div className="modal-action">
-            <button type="button" onClick={onClose} className="btn btn-ghost">
+            <button 
+              type="button" 
+              onClick={handleClose} 
+              className="btn btn-ghost"
+              disabled={loading}
+            >
               Cancel
             </button>
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
             >
-              {isSubmitting ? (
+              {isSubmitting || loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Updating...

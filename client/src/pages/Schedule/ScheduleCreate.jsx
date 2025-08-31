@@ -53,7 +53,6 @@ ScheduleCreate.Modal = function CreateModal({
     },
   });
 
-  const axiosSecure = useAxiosSecure();
 
   const onSubmit = async (data) => {
     try {
@@ -63,9 +62,8 @@ ScheduleCreate.Modal = function CreateModal({
         date: data.date || undefined, // Send undefined instead of empty string
       };
 
-      const response = await axiosSecure.post("/api/schedule", formattedData);
+      onSuccess(formattedData);
       reset(); // Clear form after successful submission
-      onSuccess(response.data);
     } catch (error) {
       console.error("Create Error:", error);
       alert(error.response?.data?.error || "Error creating schedule");

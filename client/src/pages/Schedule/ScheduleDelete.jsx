@@ -11,8 +11,7 @@ export default function ScheduleDelete({ schedule, onSuccess }) {
       window.confirm(`Are you sure you want to delete "${schedule.subject}"?`)
     ) {
       setIsDeleting(true);
-      try {
-        await axiosSecure.delete(`/api/schedule/${schedule._id}`);
+      try {        
         onSuccess(schedule._id);
       } catch (error) {
         console.error("Delete Error:", error);
