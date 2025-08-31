@@ -23,11 +23,11 @@ export const budgetSchema = z.object({
   type: z.enum(["income", "expense"]),
   amount: z.number().positive("Amount must be positive"),
   description: z.string().optional(),
-  date: z.date(),
-  // .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, {
-  //   message: "Date must be in YYYY-MM-DDTHH:mm format",
-  // })
-  // .transform((val) => val + ":00"), // append seconds to make ISO string
+  date: z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, {
+    message: "Date must be in YYYY-MM-DDTHH:mm format",
+  })
+  .transform((val) => val + ":00"), // append seconds to make ISO string
 });
 
 export const plannerSchema = z.object({
