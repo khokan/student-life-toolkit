@@ -38,8 +38,11 @@ ScheduleEdit.Modal = function EditModal({ schedule, onClose, onSuccess }) {
 
   const onSubmit = async (data) => {
     try {
-      await axiosSecure.put(`/api/schedule/${schedule._id}`, data);
-      onSuccess();
+      const response = await axiosSecure.put(
+        `/api/schedule/${schedule._id}`,
+        data
+      );
+      onSuccess(response.data);
     } catch (error) {
       console.error("Update Error:", error);
       alert(error.response?.data?.error || "Error updating schedule");

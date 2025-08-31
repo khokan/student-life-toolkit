@@ -1,26 +1,33 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X, Loader2 } from "lucide-react";
-import { useState } from "react";
 import { scheduleSchema } from "../../schemas/zodSchemas";
 import useAxiosSecure from "../../hooks/useAxiosSecure";
 
-export default function ScheduleCreate({ onCreateClick }) {
+export default function ScheduleCreate({ onCreateClick, disabled = false }) {
   return (
     <div className="mb-8">
       <div
-        onClick={onCreateClick}
-        className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer group border-2 border-dashed border-gray-300 hover:border-blue-400 h-full flex items-center justify-center"
+        onClick={disabled ? undefined : onCreateClick}
+        className={`card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer group border-2 border-dashed border-gray-300 hover:border-blue-400 h-full flex items-center justify-center ${
+          disabled ? "opacity-50 cursor-not-allowed" : ""
+        }`}
       >
         <div className="card-body text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
+          <div
+            className={`w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${
+              disabled ? "" : "group-hover:bg-blue-200"
+            }`}
+          >
             <Plus className="w-8 h-8 text-blue-600" />
           </div>
           <h2 className="text-xl font-semibold text-gray-700 mb-2">
             Add New Class
           </h2>
           <p className="text-gray-500">
-            Click here to schedule a new class session
+            {disabled
+              ? "Processing..."
+              : "Click here to schedule a new class session"}
           </p>
         </div>
       </div>
@@ -29,7 +36,11 @@ export default function ScheduleCreate({ onCreateClick }) {
 }
 
 // Modal Component
-ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
+ScheduleCreate.Modal = function CreateModal({
+  onClose,
+  onSuccess,
+  loading = false,
+}) {
   const {
     register,
     handleSubmit,
@@ -37,19 +48,33 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      colorCode: "#3B82F6", // Set default value here instead of on input
+    },
   });
 
   const axiosSecure = useAxiosSecure();
 
   const onSubmit = async (data) => {
     try {
-      await axiosSecure.post("/api/schedule", data);
-      reset();
-      onSuccess();
+      // Format date to ensure consistency
+      const formattedData = {
+        ...data,
+        date: data.date || undefined, // Send undefined instead of empty string
+      };
+
+      const response = await axiosSecure.post("/api/schedule", formattedData);
+      reset(); // Clear form after successful submission
+      onSuccess(response.data);
     } catch (error) {
       console.error("Create Error:", error);
       alert(error.response?.data?.error || "Error creating schedule");
     }
+  };
+
+  const handleClose = () => {
+    reset(); // Reset form when closing modal
+    onClose();
   };
 
   return (
@@ -57,7 +82,10 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
       <div className="modal-box max-w-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold">Schedule New Class</h3>
-          <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
+          <button
+            onClick={handleClose}
+            className="btn btn-sm btn-circle btn-ghost"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -72,6 +100,7 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
                 {...register("subject")}
                 placeholder="Mathematics, Physics, etc."
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.subject && (
                 <span className="text-error text-sm mt-1">
@@ -88,6 +117,7 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
                 {...register("instructor")}
                 placeholder="Instructor name"
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.instructor && (
                 <span className="text-error text-sm mt-1">
@@ -105,6 +135,7 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
               type="date"
               {...register("date")}
               className="input input-bordered"
+              disabled={loading}
             />
           </div>
 
@@ -117,6 +148,7 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
                 type="time"
                 {...register("startTime")}
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.startTime && (
                 <span className="text-error text-sm mt-1">
@@ -133,6 +165,7 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
                 type="time"
                 {...register("endTime")}
                 className="input input-bordered"
+                disabled={loading}
               />
               {errors.endTime && (
                 <span className="text-error text-sm mt-1">
@@ -150,8 +183,8 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
               <input
                 type="color"
                 {...register("colorCode")}
-                defaultValue="#3B82F6"
                 className="w-12 h-12 border rounded cursor-pointer"
+                disabled={loading}
               />
               <span className="text-sm text-gray-500">
                 Choose a color for this class
@@ -160,15 +193,20 @@ ScheduleCreate.Modal = function CreateModal({ onClose, onSuccess }) {
           </div>
 
           <div className="modal-action">
-            <button type="button" onClick={onClose} className="btn btn-ghost">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="btn btn-ghost"
+              disabled={loading}
+            >
               Cancel
             </button>
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
             >
-              {isSubmitting ? (
+              {isSubmitting || loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Creating...

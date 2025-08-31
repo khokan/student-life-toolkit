@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.post("/", validate(scheduleCreate), async (req, res, next) => {
   try {
+    console.log("Creating schedule:", req.validated);
     const data = req.validated;
     const doc = await schedule.create(data);
     res.status(201).json(doc);

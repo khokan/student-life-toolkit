@@ -13,7 +13,7 @@ export default function ScheduleDelete({ schedule, onSuccess }) {
       setIsDeleting(true);
       try {
         await axiosSecure.delete(`/api/schedule/${schedule._id}`);
-        onSuccess();
+        onSuccess(schedule._id);
       } catch (error) {
         console.error("Delete Error:", error);
         alert("Error deleting schedule");
