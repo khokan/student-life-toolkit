@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { budgetSchema } from "../schemas/zodSchemas";
 import useAxiosSecure from "../hooks/useAxiosSecure";
 import { 
@@ -18,13 +19,87 @@ import {
   Download
 } from "lucide-react";
 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+
 export default function BudgetPage() {
-  const [budgets, setBudgets] = useState([]);
   const [editingBudget, setEditingBudget] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const axiosSecure = useAxiosSecure();
+  const queryClient = useQueryClient();
+
+  // Fetch budgets with React Query
+  const {
+    data: budgets = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["budgets"],
+    queryFn: async () => {
+      const res = await axiosSecure.get("/api/budget");
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (newBudget) => axiosSecure.post("/api/budget", newBudget),
+    onSuccess: (response) => {
+      // Optimistic update
+      queryClient.setQueryData(["budgets"], (old) => [
+        ...(old || []),
+        response.data,
+      ]);
+      setShowAddModal(false);
+    },
+    onError: (error) => {
+      console.error("Create failed:", error);
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => axiosSecure.put(`/api/budget/${id}`, data),
+    onSuccess: (response, variables) => {
+      // Optimistic update
+      queryClient.setQueryData(["budgets"], (old) =>
+        (old || []).map((budget) =>
+          budget._id === variables.id ? response.data : budget
+        )
+      );
+      setEditingBudget(null);
+      setShowAddModal(false);
+    },
+    onError: (error) => {
+      console.error("Update failed:", error);
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id) => axiosSecure.delete(`/api/budget/${id}`),
+    onSuccess: (_, deletedId) => {
+      // Optimistic update
+      queryClient.setQueryData(["budgets"], (old) =>
+        (old || []).filter((budget) => budget._id !== deletedId)
+      );
+    },
+    onError: (error) => {
+      console.error("Delete failed:", error);
+    },
+  });
 
   const {
     register,
@@ -36,49 +111,6 @@ export default function BudgetPage() {
     resolver: zodResolver(budgetSchema),
   });
 
-  useEffect(() => {
-    fetchBudgets();
-  }, []);
-
-  const fetchBudgets = async () => {
-    try {
-      setLoading(true);
-      const res = await axiosSecure.get("/api/budget");
-      setBudgets(res.data);
-    } catch (err) {
-      console.error("Failed to fetch budgets:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onSubmit = async (data) => {
-    try {
-      if (editingBudget) {
-        await axiosSecure.put(`/api/budget/${editingBudget._id}`, data);
-        setEditingBudget(null);
-      } else {
-        await axiosSecure.post("/api/budget", data);
-      }
-      reset();
-      setShowAddModal(false);
-      fetchBudgets();
-    } catch (err) {
-      console.error("Operation failed:", err);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this record?")) {
-      try {
-        await axiosSecure.delete(`/api/budget/${id}`);
-        fetchBudgets();
-      } catch (err) {
-        console.error("Delete failed:", err);
-      }
-    }
-  };
-
   const handleEdit = (budget) => {
     setEditingBudget(budget);
     setValue("type", budget.type);
@@ -86,6 +118,20 @@ export default function BudgetPage() {
     setValue("description", budget.description);
     setValue("date", new Date(budget.date).toISOString().slice(0, 16));
     setShowAddModal(true);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure you want to delete this record?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const onSubmit = (data) => {
+    if (editingBudget) {
+      updateMutation.mutate({ id: editingBudget._id, data });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const closeModal = () => {
@@ -108,7 +154,7 @@ export default function BudgetPage() {
 
   const balance = totalIncome - totalExpense;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -118,6 +164,45 @@ export default function BudgetPage() {
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-red-600 text-lg mb-4">Error loading budgets</div>
+          <button
+            onClick={() => queryClient.refetchQueries(["budgets"])}
+            className="btn btn-primary"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Group data by date
+const chartData = budgets.reduce((acc, b) => {
+  const date = new Date(b.date).toLocaleDateString();
+
+  if (!acc[date]) {
+    acc[date] = { date, income: 0, expense: 0 };
+  }
+
+  if (b.type === "income") {
+    acc[date].income += b.amount;
+  } else {
+    acc[date].expense += b.amount;
+  }
+
+  return acc;
+}, {});
+
+// Convert object → array sorted by date
+const chartDataArray = Object.values(chartData).sort(
+  (a, b) => new Date(a.date) - new Date(b.date)
+);
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -132,14 +217,19 @@ export default function BudgetPage() {
             <button
               onClick={() => setShowAddModal(true)}
               className="btn btn-primary gap-2"
+              disabled={createMutation.isPending}
             >
-              <Plus className="w-5 h-5" />
+              {createMutation.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Plus className="w-5 h-5" />
+              )}
               Add Transaction
             </button>
           </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - These update automatically */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between">
@@ -176,28 +266,49 @@ export default function BudgetPage() {
           </div>
         </div>
 
-        {/* Filters and Actions */}
+{/* Chart Section */}
+<div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+  <h2 className="text-lg font-bold text-gray-800 mb-4">Income vs Expense Over Time</h2>
+  <div className="w-full h-80">
+    <ResponsiveContainer>
+      <LineChart data={chartDataArray}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey="income"
+          stroke="#16a34a" // green
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="expense"
+          stroke="#dc2626" // red
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+</div>
+
+        {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-            <div className="flex items-center gap-4">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="select select-bordered"
-              >
-                <option value="all">All Transactions</option>
-                <option value="income">Income Only</option>
-                <option value="expense">Expenses Only</option>
-              </select>
-            </div>
-            
-            <div className="flex gap-2">
-              <button className="btn btn-outline gap-2">
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
+          <div className="flex items-center gap-4">
+            <Filter className="w-5 h-5 text-gray-400" />
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="select select-bordered"
+            >
+              <option value="all">All Transactions</option>
+              <option value="income">Income Only</option>
+              <option value="expense">Expenses Only</option>
+            </select>
           </div>
         </div>
 
@@ -270,15 +381,25 @@ export default function BudgetPage() {
                           onClick={() => handleEdit(budget)}
                           className="btn btn-sm btn-outline btn-circle hover:btn-primary"
                           title="Edit"
+                          disabled={updateMutation.isPending || deleteMutation.isPending}
                         >
-                          <Edit3 className="w-4 h-4" />
+                          {updateMutation.isPending && updateMutation.variables?.id === budget._id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Edit3 className="w-4 h-4" />
+                          )}
                         </button>
                         <button
                           onClick={() => handleDelete(budget._id)}
                           className="btn btn-sm btn-outline btn-circle hover:btn-error"
                           title="Delete"
+                          disabled={deleteMutation.isPending || updateMutation.isPending}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deleteMutation.isPending && deleteMutation.variables === budget._id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -329,6 +450,7 @@ export default function BudgetPage() {
                   <select 
                     {...register("type")} 
                     className="select select-bordered w-full"
+                    disabled={isSubmitting}
                   >
                     <option value="">Select type</option>
                     <option value="income">Income</option>
@@ -352,6 +474,7 @@ export default function BudgetPage() {
                     step="0.01"
                     placeholder="0.00"
                     className="input input-bordered w-full"
+                    disabled={isSubmitting}
                   />
                   {errors.amount && (
                     <span className="text-error text-sm mt-1">{errors.amount.message}</span>
@@ -369,6 +492,7 @@ export default function BudgetPage() {
                     {...register("description")}
                     placeholder="Enter description"
                     className="input input-bordered w-full"
+                    disabled={isSubmitting}
                   />
                   {errors.description && (
                     <span className="text-error text-sm mt-1">{errors.description.message}</span>
@@ -386,6 +510,7 @@ export default function BudgetPage() {
                     {...register("date")}
                     type="datetime-local"
                     className="input input-bordered w-full"
+                    disabled={isSubmitting}
                   />
                   {errors.date && (
                     <span className="text-error text-sm mt-1">{errors.date.message}</span>
@@ -393,7 +518,12 @@ export default function BudgetPage() {
                 </div>
 
                 <div className="modal-action">
-                  <button type="button" onClick={closeModal} className="btn btn-ghost">
+                  <button 
+                    type="button" 
+                    onClick={closeModal} 
+                    className="btn btn-ghost"
+                    disabled={isSubmitting}
+                  >
                     Cancel
                   </button>
                   <button 
