@@ -1,5 +1,5 @@
 import React from 'react';
-import FeatureCard from './FeatureCard';
+import FeatureCard from '../components/FeatureCard';
 import { 
   Calendar, 
   DollarSign, 
@@ -42,7 +42,7 @@ const features = [
   }
 ];
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 px-4">
       <div className="max-w-6xl mx-auto">
