@@ -1,5 +1,5 @@
 import React from 'react';
-import FeatureCard from '../components/FeatureCard';
+import FeatureCard from './FeatureCard';
 import { 
   Calendar, 
   DollarSign, 
@@ -52,7 +52,7 @@ export default function Home() {
             <Brain className="w-8 h-8 text-blue-600" />
           </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-            Academic Suite Pro
+            Student Life Toolkit
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Streamline your academic journey with powerful tools designed for modern students. 
