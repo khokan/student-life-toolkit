@@ -1,9 +1,22 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { Loader2, Plus, X, Clock, Calendar, AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 import { plannerSchema } from "../../schemas/zodSchemas";
+
+import { 
+  BookOpen, 
+  Book, 
+  FileText, 
+  Flag, 
+  Calendar, 
+  Clock, 
+  AlertCircle, 
+  X, 
+  Plus, 
+  Loader2, 
+  Save 
+} from "lucide-react";
 
 export default function PlannerForm({
   task,
@@ -71,173 +84,235 @@ export default function PlannerForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-      {/* Subject */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-semibold">Subject</span>
-        </label>
+  <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+  {/* Header */}
+  <div className="text-center mb-2">
+    <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-2xl mb-3">
+      <BookOpen className="w-6 h-6 text-primary" />
+    </div>
+    <h3 className="text-xl font-semibold text-gray-800">
+      {task ? "Edit Study Task" : "Create Study Task"}
+    </h3>
+    <p className="text-sm text-gray-500 mt-1">
+      {task ? "Update your study task details" : "Plan your study session with specific time slots"}
+    </p>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Subject */}
+    <div className="form-control">
+      <label className="label flex items-center gap-2 pb-2">
+        <Book className="w-4 h-4 text-gray-500" />
+        <span className="label-text font-semibold text-gray-700">Subject</span>
+      </label>
+      <div className="relative">
         <input
           {...register("subject")}
-          placeholder="e.g., Mathematics, Physics"
-          className="input input-bordered"
+          placeholder="e.g., Mathematics, Physics, Chemistry"
+          className="input input-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
           disabled={isLoading}
         />
-        {errors.subject && (
-          <span className="text-error text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {errors.subject.message}
-          </span>
-        )}
+        <BookOpen className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
       </div>
+      {errors.subject && (
+        <span className="text-error text-sm mt-2 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {errors.subject.message}
+        </span>
+      )}
+    </div>
 
-      {/* Topic */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-semibold">Topic</span>
-        </label>
+    {/* Topic */}
+    <div className="form-control">
+      <label className="label flex items-center gap-2 pb-2">
+        <FileText className="w-4 h-4 text-gray-500" />
+        <span className="label-text font-semibold text-gray-700">Topic</span>
+      </label>
+      <div className="relative">
         <input
           {...register("topic")}
-          placeholder="Specific topic or chapter"
-          className="input input-bordered"
+          placeholder="Specific topic or chapter name"
+          className="input input-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
           disabled={isLoading}
         />
-        {errors.topic && (
-          <span className="text-error text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {errors.topic.message}
-          </span>
-        )}
+        <FileText className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
       </div>
+      {errors.topic && (
+        <span className="text-error text-sm mt-2 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {errors.topic.message}
+        </span>
+      )}
+    </div>
+  </div>
 
-      {/* Priority */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-semibold">Priority</span>
-        </label>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Priority */}
+    <div className="form-control">
+      <label className="label flex items-center gap-2 pb-2">
+        <Flag className="w-4 h-4 text-gray-500" />
+        <span className="label-text font-semibold text-gray-700">Priority</span>
+      </label>
+      <div className="relative">
         <select
           {...register("priority")}
-          className="select select-bordered"
+          className="select select-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
           disabled={isLoading}
         >
           <option value="high">High Priority</option>
           <option value="medium">Medium Priority</option>
           <option value="low">Low Priority</option>
         </select>
-        {errors.priority && (
-          <span className="text-error text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {errors.priority.message}
-          </span>
-        )}
+        <Flag className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
       </div>
+      {errors.priority && (
+        <span className="text-error text-sm mt-2 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {errors.priority.message}
+        </span>
+      )}
+    </div>
 
-      {/* Deadline */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-semibold">Deadline</span>
-        </label>
+    {/* Deadline */}
+    <div className="form-control">
+      <label className="label flex items-center gap-2 pb-2">
+        <Calendar className="w-4 h-4 text-gray-500" />
+        <span className="label-text font-semibold text-gray-700">Deadline</span>
+      </label>
+      <div className="relative">
         <input
           {...register("deadline")}
           type="datetime-local"
-          className="input input-bordered"
+          className="input input-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
           disabled={isLoading}
         />
-        {errors.deadline && (
-          <span className="text-error text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {errors.deadline.message}
-          </span>
-        )}
+        <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
       </div>
+      {errors.deadline && (
+        <span className="text-error text-sm mt-2 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {errors.deadline.message}
+        </span>
+      )}
+    </div>
+  </div>
 
-      {/* Time Slots */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-semibold">Study Time Slots</span>
-          <span className="label-text-alt text-gray-500">
-            Add your available time slots
-          </span>
-        </label>
+  {/* Time Slots */}
+  <div className="form-control">
+    <div className="flex items-center justify-between mb-4">
+      <label className="label p-0 flex items-center gap-2">
+        <Clock className="w-5 h-5 text-gray-500" />
+        <span className="label-text font-semibold text-gray-700">Study Time Slots</span>
+      </label>
+      <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+        Add your available time slots
+      </span>
+    </div>
 
-        <div className="space-y-3 p-4 bg-base-200 rounded-lg border border-base-300">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2 items-start">
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-                <input
-                  {...register(`slots.${index}.day`)}
-                  placeholder="Day (e.g., Monday)"
-                  className="input input-bordered"
-                  disabled={isLoading}
-                />
-                <input
-                  {...register(`slots.${index}.startTime`)}
-                  type="time"
-                  className="input input-bordered"
-                  disabled={isLoading}
-                />
-                <input
-                  {...register(`slots.${index}.endTime`)}
-                  type="time"
-                  className="input input-bordered"
-                  disabled={isLoading}
-                />
-              </div>
-              {fields.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => remove(index)}
-                  className="btn btn-sm btn-error btn-square"
-                  disabled={isLoading}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+    <div className="bg-base-200 rounded-lg border border-base-300 p-5 space-y-4">
+      {fields.map((field, index) => (
+        <div key={field.id} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Day Input */}
+            <div className="relative">
+              <input
+                {...register(`slots.${index}.day`)}
+                placeholder="Day (e.g., Monday)"
+                className="input input-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                disabled={isLoading}
+              />
+              <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
             </div>
-          ))}
 
-          <button
-            type="button"
-            onClick={addTimeSlot}
-            className="btn btn-outline btn-sm gap-2 mt-2"
-            disabled={isLoading}
-          >
-            <Plus className="w-4 h-4" />
-            Add Time Slot
-          </button>
-        </div>
+            {/* Start Time */}
+            <div className="relative">
+              <input
+                {...register(`slots.${index}.startTime`)}
+                type="time"
+                className="input input-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                disabled={isLoading}
+              />
+              <Clock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            </div>
 
-        {errors.slots && (
-          <span className="text-error text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {errors.slots.message}
-          </span>
-        )}
-      </div>
-
-      {/* Form Actions */}
-      <div className="modal-action">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn btn-ghost"
-          disabled={isLoading}
-        >
-          Cancel
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              {task ? "Updating..." : "Adding..."}
-            </>
-          ) : task ? (
-            "Update Task"
-          ) : (
-            "Add Task"
+            {/* End Time */}
+            <div className="relative">
+              <input
+                {...register(`slots.${index}.endTime`)}
+                type="time"
+                className="input input-bordered w-full pl-9 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                disabled={isLoading}
+              />
+              <Clock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            </div>
+          </div>
+          
+          {fields.length > 1 && (
+            <button
+              type="button"
+              onClick={() => remove(index)}
+              className="btn btn-sm btn-error btn-square mt-1"
+              disabled={isLoading}
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
-        </button>
-      </div>
-    </form>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addTimeSlot}
+        className="btn btn-outline btn-sm gap-2 w-full md:w-auto"
+        disabled={isLoading}
+      >
+        <Plus className="w-4 h-4" />
+        Add Another Time Slot
+      </button>
+    </div>
+
+    {errors.slots && (
+      <span className="text-error text-sm mt-2 flex items-center gap-2">
+        <AlertCircle className="w-4 h-4" />
+        {errors.slots.message}
+      </span>
+    )}
+  </div>
+
+  {/* Form Actions */}
+  <div className="modal-action flex flex-col sm:flex-row justify-end gap-3 pt-5 border-t border-gray-200">
+    <button
+      type="button"
+      onClick={onCancel}
+      className="btn btn-ghost min-w-[120px] border border-gray-300 hover:bg-gray-50 order-2 sm:order-1 flex items-center gap-2"
+      disabled={isLoading}
+    >
+      <X className="w-4 h-4" />
+      Cancel
+    </button>
+    <button 
+      type="submit" 
+      className="btn btn-primary min-w-[140px] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary border-0 text-white shadow-sm hover:shadow-md transition-all order-1 sm:order-2 flex items-center gap-2"
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          {task ? "Updating..." : "Creating..."}
+        </>
+      ) : task ? (
+        <>
+          <Save className="w-4 h-4" />
+          Update Task
+        </>
+      ) : (
+        <>
+          <Plus className="w-4 h-4" />
+          Create Task
+        </>
+      )}
+    </button>
+  </div>
+</form>
   );
 }

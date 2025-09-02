@@ -32,7 +32,7 @@ export default function FeatureCard({ title, description, icon, to, gradient, in
 
           {/* Action Link */}
           <div className="flex items-center justify-between mt-4">
-            <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition-colors">
+            <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition-color">
               Explore feature
             </span>
             <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>

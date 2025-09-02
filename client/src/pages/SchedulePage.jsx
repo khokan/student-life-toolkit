@@ -18,6 +18,9 @@ import {
   Users,
   BookOpen,
   GraduationCap,
+  Layout,
+  Grid,
+  List
 } from "lucide-react";
 
 /**
@@ -203,29 +206,40 @@ export default function SchedulePage() {
                 </div>
 
                 {/* View Toggle */}
-                <div className="w-full sm:w-auto">
-                  <label className="label">
-                    <span className="label-text font-semibold">View</span>
-                  </label>
-                  <div className="join">
-                    <button
-                      className={`join-item btn ${
-                        selectedView === "grid" ? "btn-primary" : "btn-ghost"
-                      }`}
-                      onClick={() => setSelectedView("grid")}
-                    >
-                      Grid
-                    </button>
-                    <button
-                      className={`join-item btn ${
-                        selectedView === "list" ? "btn-primary" : "btn-ghost"
-                      }`}
-                      onClick={() => setSelectedView("list")}
-                    >
-                      List
-                    </button>
+               <div className="w-full sm:w-auto">
+                  <div className="flex items-center gap-3 mt-3">
+                    <label className="label p-0 flex items-center gap-2 min-w-[80px]">
+                      <Layout className="w-4 h-4 text-gray-500" />
+                      <span className="label-text font-semibold text-gray-700 whitespace-nowrap">View:</span>
+                    </label>
+                    <div className="join border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                      <button
+                        className={`join-item btn gap-2 min-w-[80px] px-3 ${
+                          selectedView === "grid" 
+                            ? "btn-primary border-0 text-white" 
+                            : "btn-ghost bg-white text-gray-700 hover:bg-gray-50 border-0"
+                        } transition-all duration-200`}
+                        onClick={() => setSelectedView("grid")}
+                      >
+                        <Grid className="w-4 h-4" />
+                        <span className="sm:hidden">Grid</span>
+                        <span className="hidden sm:inline">Grid View</span>
+                      </button>
+                      <button
+                        className={`join-item btn gap-2 min-w-[80px] px-3 ${
+                          selectedView === "list" 
+                            ? "btn-primary border-0 text-white" 
+                            : "btn-ghost bg-white text-gray-700 hover:bg-gray-50 border-0"
+                        } transition-all duration-200`}
+                        onClick={() => setSelectedView("list")}
+                      >
+                        <List className="w-4 h-4" />
+                        <span className="sm:hidden">List</span>
+                        <span className="hidden sm:inline">List View</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+              </div>
               </div>
 
               <div className="flex items-end">
