@@ -103,6 +103,10 @@ export default function PlannerList({
                     <span className="badge badge-sm badge-success">
                       Completed
                     </span>
+                  )} {!task.isCompleted && (
+                    <span className="badge badge-sm badge-ghost">
+                      Active
+                    </span>
                   )}
                 </div>
 

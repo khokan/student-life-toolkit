@@ -23,10 +23,12 @@ import {
  */
 export default function PlannerPage() {
   const [selectedPriority, setSelectedPriority] = useState("all");
+  const [sortBy, setSortBy] = useState("deadline-desc");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [editingTask, setEditingTask] = useState(null);
   const queryClient = useQueryClient();
   const axiosSecure = useAxiosSecure();
+
 
   // Fetch tasks with React Query for caching and state management
   const {
@@ -93,14 +95,32 @@ export default function PlannerPage() {
   });
 
   // Filter tasks based on selected criteria
-  const filteredTasks = tasks.filter((task) => {
+  const filteredTasks = tasks
+  .filter((task) => {
     const priorityMatch =
       selectedPriority === "all" || task.priority === selectedPriority;
     const statusMatch =
       selectedStatus === "all" ||
       (selectedStatus === "completed" ? task.isCompleted : !task.isCompleted);
     return priorityMatch && statusMatch;
+  })
+  .sort((a, b) => {
+    switch (sortBy) {
+      case "deadline-desc":
+        return new Date(b.deadline) - new Date(a.deadline);
+      case "deadline-asc":
+        return new Date(a.deadline) - new Date(b.deadline);
+      case "priority-desc":
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      case "priority-asc":
+        const priorityOrderAsc = { high: 3, medium: 2, low: 1 };
+        return priorityOrderAsc[a.priority] - priorityOrderAsc[b.priority];
+      default:
+        return new Date(b.deadline) - new Date(a.deadline);
+    }
   });
+  
 
   // Open modal for editing
   const handleEdit = (task) => {
@@ -167,6 +187,7 @@ export default function PlannerPage() {
       </div>
     );
   }
+  
 
   return (
     <ErrorBoundary>
@@ -234,16 +255,21 @@ export default function PlannerPage() {
                   <option value="completed">Completed</option>
                 </select>
               </div>
-              <div>
-                <label className="label">
-                  <span className="label-text font-semibold">Sort By</span>
-                </label>
-                <select className="select select-bordered w-full">
-                  <option value="deadline">Deadline</option>
-                  <option value="priority">Priority</option>
-                  <option value="created">Recently Added</option>
-                </select>
-              </div>
+             <div>
+  <label className="label">
+    <span className="label-text font-semibold">Sort By</span>
+  </label>
+  <select
+    value={sortBy}
+    onChange={(e) => setSortBy(e.target.value)}
+    className="select select-bordered w-full"
+  >
+    <option value="deadline-desc">Deadline (Newest First)</option>
+    <option value="deadline-asc">Deadline (Oldest First)</option>
+    <option value="priority-desc">Priority (High to Low)</option>
+    <option value="priority-asc">Priority (Low to High)</option>
+  </select>
+</div>
               <div>
                 <button
                   onClick={() => {
